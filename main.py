@@ -217,4 +217,4 @@ def validar_cliente(deal_id):
     return jsonify({"message": "Cliente validado com sucesso", "data": blink_response.json()})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3558, debug=True)
+    app.run(host="0.0.0.0", port=1471, debug=True)
