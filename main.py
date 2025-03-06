@@ -23,7 +23,10 @@ WEBHOOK_URL_BITRIX = f"{BITRIX_API_URL}"
 WEBHOOK_URL_BLINK = f"{BLINKCONECTA_API_URL}"
 AUTH = f"{BLINKCONECTA_AUTH}"
 
-
+def remover_espacos(valor):
+    if isinstance(valor, str):
+        return valor.replace(" ", "")
+    return valor
 
 # Rota para atualizar viabilidade
 @app.route("/api/atualizar_viabilidade/deal_id=<int:deal_id>", methods=["POST"])
@@ -36,10 +39,10 @@ def atualizar_viabilidade(deal_id):
     deal_data = bitrix_response.json().get("result", {})
 
     dados = {
-        "cidade": deal_data.get("UF_CRM_1731588487", ""),
-        "bairro": deal_data.get("UF_CRM_1700661287551", ""),
-        "endereco": deal_data.get("UF_CRM_1698688252221", ""),
-        "numero": deal_data.get("UF_CRM_1700661252544", "")
+        "cidade": remover_espacos(deal_data.get("UF_CRM_1731588487", "")),
+        "bairro": remover_espacos(deal_data.get("UF_CRM_1700661287551", "")),
+        "endereco": remover_espacos(deal_data.get("UF_CRM_1698688252221", "")),
+        "numero": remover_espacos(deal_data.get("UF_CRM_1700661252544", ""))
     }
     
     headers = {"Authorization": BLINKCONECTA_AUTH, "User-Agent": "Mozilla/5.0"}
@@ -103,42 +106,41 @@ def validar_cliente(deal_id):
         return "F" if sexo_id == "48548" else "M" if sexo_id == "48550" else ""
 
     def limpar_cpf(cpf):
-        return re.sub(r"[.\-]", "", cpf) if cpf else ""
+        return re.sub(r"[.\-\s]", "", cpf) if cpf else ""
 
     def limpar_cep(cep):
-        return re.sub(r"[-]", "", cep) if cep else ""
+        return re.sub(r"[-\s]", "", cep) if cep else ""
 
     def extrair_telefone(numero_completo):
 
         if not numero_completo.startswith("+55"):
             numero_completo = "+55" + numero_completo
 
-    
         padrao = re.match(r"\+55(\d{2})(\d{8,9})", numero_completo)  
         if padrao:
             return padrao.group(1), padrao.group(2)  
     
         return "", ""
 
-    telefone_completo = deal_data.get("UF_CRM_1698698407472", "")
+    telefone_completo = remover_espacos(deal_data.get("UF_CRM_1698698407472", ""))
     ddd, telefone = extrair_telefone(telefone_completo)
 
     payload = {
-        "nome": deal_data.get("UF_CRM_1697762313423", ""),
+        "nome": remover_espacos(deal_data.get("UF_CRM_1697762313423", "")),
         "dtNascimento": formatar_data(deal_data.get("UF_CRM_1723557410", "")),
         "cpfCnpj": limpar_cpf(deal_data.get("UF_CRM_1697807353336", "")),
-        "identidade": deal_data.get("UF_CRM_1697807372536", ""),
+        "identidade": remover_espacos(deal_data.get("UF_CRM_1697807372536", "")),
         "sexo": converter_sexo(deal_data.get("UF_CRM_1724096872", "")),
-        "email": deal_data.get("UF_CRM_1697807340141", ""),
+        "email": remover_espacos(deal_data.get("UF_CRM_1697807340141", "")),
         "dddPrimario": ddd,
         "telefonePrimario": telefone,
         "cepInstalacao": limpar_cep(deal_data.get("UF_CRM_1700661314351", "")),
-        "bairroInstalacao": deal_data.get("UF_CRM_1700661287551", ""),
-        "ufInstalacao": deal_data.get("UF_CRM_1731589190", ""),
-        "cidadeInstalacao": deal_data.get("UF_CRM_1731588487", ""),
-        "enderecoInstalacao": deal_data.get("UF_CRM_1698688252221", ""),
-        "numeroInstalacao": deal_data.get("UF_CRM_1700661252544", ""),
-        "idPacote": 110 ,
+        "bairroInstalacao": remover_espacos(deal_data.get("UF_CRM_1700661287551", "")),
+        "ufInstalacao": remover_espacos(deal_data.get("UF_CRM_1731589190", "")),
+        "cidadeInstalacao": remover_espacos(deal_data.get("UF_CRM_1731588487", "")),
+        "enderecoInstalacao": remover_espacos(deal_data.get("UF_CRM_1698688252221", "")),
+        "numeroInstalacao": remover_espacos(deal_data.get("UF_CRM_1700661252544", "")),
+        "idPacote": 110,
         "idTipoMidia": 106,
         "idVendedor": 26
     }
@@ -156,7 +158,6 @@ def validar_cliente(deal_id):
 
     blinkvalue = blink_response.json().get("values", {})
 
-
     pendencias_financeiras = blinkvalue.get("serasa_ocorrencias", {}).get("Pendencias Financeiras", {}).get("valor", {})
     score = blinkvalue.get("serasa_score", {})
     pendencias_internas = blinkvalue.get("serasa_ocorrencias", {}).get("Pendencias Internas", {}).get("valor", {})
@@ -171,7 +172,6 @@ def validar_cliente(deal_id):
     print(pendencias_financeiras)
     print(id_oportunidade)
 
-    
     if isinstance(pendencias_financeiras, float):
         pendencias_financeiras = str(pendencias_financeiras)
     if isinstance(pendencias_internas, float):
@@ -187,27 +187,20 @@ def validar_cliente(deal_id):
     if isinstance(score, float):
         score = str(score)
     if isinstance(comprovante_komunicar, float):
-        score = str(comprovante_komunicar)
+        comprovante_komunicar = str(comprovante_komunicar)
     if isinstance(comprovante_vendedor, float):
-        score = str(comprovante_vendedor)    
-
+        comprovante_vendedor = str(comprovante_vendedor)    
 
     update_payload = {
         "id": deal_id,
         "fields": {
             "UF_CRM_1738270468": f"Pendencias Financeiras: {pendencias_financeiras.upper() if pendencias_financeiras else '0'} "
-                                f"Pendencias Internas: {pendencias_internas.upper() if pendencias_internas else '0'} "
-                                f"Protestos do Estado: {protestos_do_estado.upper() if protestos_do_estado else '0' } "
-                                f"Cheques sem fundos: {cheques_sem_fundos.upper() if cheques_sem_fundos else '0' } ",
-
+                                   f"Pendencias Internas: {pendencias_internas.upper() if pendencias_internas else '0'} "
+                                   f"Protestos do Estado: {protestos_do_estado.upper() if protestos_do_estado else '0'} "
+                                   f"Cheques sem fundos: {cheques_sem_fundos.upper() if cheques_sem_fundos else '0'}",
             "UF_CRM_1739199446": f"ID: {id_oportunidade}",
-
-            "UF_CRM_1738270439": f"Status Aprovação: {status_aprovacao.upper()} "
-                                f": {score} ",
-
-            "UF_CRM_1738599835": f"Tipo de Imagem: {comprovante_komunicar.upper()} "
-                                f"Vendedor: {comprovante_vendedor.upper()} "
-
+            "UF_CRM_1738270439": f"Status Aprovação: {status_aprovacao.upper()} : {score}",
+            "UF_CRM_1738599835": f"Tipo de Imagem: {comprovante_komunicar.upper()} Vendedor: {comprovante_vendedor.upper()}"
         }
     }
 
